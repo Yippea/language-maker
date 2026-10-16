@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge - Create Your Own Programming Language</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url(\'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@500;700;900&display=swap\');
+  *{font-family:Inter,sans-serif}
+  .mono{font-family:\'JetBrains Mono\',monospace}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#3f3f46;border-radius:999px}
+</style>
+</head>
+<body class="bg-[#0a0a0b] text-zinc-100 min-h-screen">
+  <!-- Header -->
+  <header class="border-b border-zinc-800 bg-zinc-900/50 sticky top-0 z-10 backdrop-blur">
+    <div class="max-w-[1600px] mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white text-black grid place-items-center font-black text-xl rounded">◈</div>
+        <div>
+          <h1 class="font-black tracking-tight leading-none">FORGE</h1>
+          <p class="text-[10px] tracking-[0.2em] text-zinc-500 font-bold">LANGUAGE WORKBENCH v1.0</p>
+        </div>
+        <span class="ml-4 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-full font-bold">COMPILES TO BINARY</span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="compile()" class="bg-white text-black px-5 py-2 rounded-full font-black text-sm hover:bg-zinc-200">⚡ COMPILE TO BINARY</button>
+        <button onclick="runVM()" class="bg-emerald-500 text-black px-5 py-2 rounded-full font-black text-sm">▶ RUN BINARY</button>
+        <button onclick="downloadBin()" class="bg-zinc-800 border border-zinc-700 px-4 py-2 rounded-full font-bold text-sm">⬇ .BIN</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-[1600px] mx-auto p-6 grid grid-cols-12 gap-6">
+    <!-- LEFT: LANGUAGE DESIGNER -->
+    <div class="col-span-3 space-y-4">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <h2 class="font-black text-sm tracking-widest mb-4">① LANGUAGE SPEC</h2>
+        <label class="text-[11px] font-bold text-zinc-500 tracking-widest">LANGUAGE NAME</label>
+        <input id="langName" value="Nova" class="w-full bg-black border border-zinc-800 rounded-lg px-3 py-2 mono text-sm mt-1 mb-3">
+        
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div>
+            <label class="text-[11px] font-bold text-zinc-500">WORD SIZE</label>
+            <select id="wordSize" class="w-full bg-black border border-zinc-800 rounded-lg px-2 py-2 text-sm mt-1">
+              <option value="8">8-bit</option>
+              <option value="16">16-bit</option>
+              <option value="32" selected>32-bit</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] font-bold text-zinc-500">ENDIANNESS</label>
+            <select id="endian" class="w-full bg-black border border-zinc-800 rounded-lg px-2 py-2 text-sm mt-1">
+              <option value="little" selected>Little</option>
+              <option value="big">Big</option>
+            </select>
+          </div>
+        </div>
+        <label class="text-[11px] font-bold text-zinc-500">REGISTERS</label>
+        <input id="regCount" type="range" min="4" max="16" value="8" class="w-full mt-1">
+        <div class="text-xs mono text-zinc-400"><span id="regCountLabel">8</span> General Purpose Registers (R0-R7)</div>
+
+        <div class="h-px bg-zinc-800 my-4"></div>
+        <h3 class="font-bold text-xs tracking-widest text-zinc-400 mb-2">SYNTAX CUSTOMIZATION</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between items-center bg-black p-2 rounded-lg border border-zinc-800"><span class="text-zinc-500">Declare var</span><input id="kwLet" value="let" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 mono w-20 text-center"></div>
+          <div class="flex justify-between items-center bg-black p-2 rounded-lg border border-zinc-800"><span class="text-zinc-500">Print</span><input id="kwPrint" value="print" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 mono w-20 text-center"></div>
+          <div class="flex justify-between items-center bg-black p-2 rounded-lg border border-zinc-800"><span class="text-zinc-500">Assign op</span><input id="opAssign" value="=" class="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 mono w-20 text-center"></div>
+        </div>
+        <div class="grid grid-cols-4 gap-1 mt-2">
+          <div><label class="text-[10px] text-zinc-500">ADD</label><input id="opAdd" value="+" class="w-full bg-black border border-zinc-800 rounded p-1 mono text-center"></div>
+          <div><label class="text-[10px] text-zinc-500">SUB</label><input id="opSub" value="-" class="w-full bg-black border border-zinc-800 rounded p-1 mono text-center"></div>
+          <div><label class="text-[10px] text-zinc-500">MUL</label><input id="opMul" value="*" class="w-full bg-black border border-zinc-800 rounded p-1 mono text-center"></div>
+          <div><label class="text-[10px] text-zinc-500">DIV</label><input id="opDiv" value="/" class="w-full bg-black border border-zinc-800 rounded p-1 mono text-center"></div>
+        </div>
+      </div>
+
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <h2 class="font-black text-sm tracking-widest mb-3">② INSTRUCTION SET (ISA)</h2>
+        <p class="text-xs text-zinc-500 mb-3">This is your CPU. Binary is encoded as: <span class="text-white mono">[OPCODE][OPERANDS]</span>. All instructions are 4 bytes.</p>
+        <div class="space-y-1 mono text-xs max-h-[220px] overflow-auto pr-1" id="isaList"></div>
+        <div class="mt-3 p-2 bg-black rounded-lg border border-zinc-800 mono text-[11px]">
+          <div class="text-zinc-500">BINARY HEADER</div>
+          <div class="text-emerald-400">MAGIC: 0x4E565841 (\'NVXA\') | VER: 0x01 | CONST_POOL_SIZE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: EDITOR -->
+    <div class="col-span-5 space-y-4">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+        <div class="flex justify-between items-center px-4 py-3 border-b border-zinc-800">
+          <span class="font-black text-xs tracking-widest" id="editorTitle">nova.src — your language</span>
+          <span class="text-xs text-zinc-500 mono" id="status">Ready</span>
+        </div>
+        <textarea id="editor" class="w-full h-[380px] bg-black p-4 mono text-sm outline-none resize-none leading-6" spellcheck="false">let x = 10
+let y = 20
+let z = x + y * 2
+print z
+
+let a = 100 / 4 - 5
+print a
+</textarea>
+        <div class="px-4 py-2 bg-zinc-950 border-t border-zinc-800 flex gap-2 text-[11px] font-bold tracking-widest">
+          <span class="text-zinc-500">LEXER → PARSER → AST → BYTECODE → BINARY</span>
+        </div>
+      </div>
+
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+        <h3 class="font-black text-xs tracking-widest mb-2">CONSOLE OUTPUT (VM EXECUTING BINARY)</h3>
+        <div id="console" class="bg-black rounded-xl p-4 mono text-sm min-h-[140px] whitespace-pre-wrap text-emerald-400 border border-zinc-800">> Binary not executed yet. Click RUN BINARY.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: BINARY -->
+    <div class="col-span-4 space-y-4">
+      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="font-black text-sm tracking-widest">③ BINARY OUTPUT</h2>
+          <span id="binSize" class="text-xs mono bg-black border border-zinc-800 px-2 py-1 rounded">0 bytes</span>
+        </div>
+        <div class="bg-black rounded-xl p-3 border border-zinc-800">
+          <div class="text-[10px] tracking-widest font-bold text-zinc-500 mb-2">HEX DUMP (RAW BYTES)</div>
+          <div id="hexdump" class="mono text-xs leading-5 break-all text-zinc-300 max-h-[180px] overflow-auto">No binary generated yet.</div>
+        </div>
+        <div class="bg-black rounded-xl p-3 border border-zinc-800 mt-3">
+          <div class="text-[10px] tracking-widest font-bold text-zinc-500 mb-2">DISASSEMBLY</div>
+          <div id="disasm" class="mono text-xs leading-5 text-zinc-300 max-h-[220px] overflow-auto">—</div>
+        </div>
+      </div>
+      <div class="bg-emerald-500 text-black rounded-2xl p-4">
+        <h3 class="font-black">HOW IT\'S NOT A WRAPPER</h3>
+        <p class="text-sm leading-snug mt-1 font-medium">Your source is NOT transpiled to JS/Python. It\'s compiled to a custom byte-code binary and executed by a VM that reads bytes one-by-one via a fetch-decode-execute loop, just like a real CPU.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+const OPCODES = {
+  LOAD_CONST: 0x01, // LOAD_CONST destReg constIdx
+  MOV:        0x02, // MOV dest src
+  ADD:        0x03, // ADD dest src1 src2
+  SUB:        0x04,
+  MUL:        0x05,
+  DIV:        0x06,
+  PRINT:      0x0A,
+  HALT:       0xFF
+};
+const OP_NAMES = Object.fromEntries(Object.entries(OPCODES).map(([k,v])=>[v,k]));
+
+let lastBinary = null;
+let lastDisasm = [];
+
+function getConfig(){
+  return {
+    name: document.getElementById(\'langName\').value || \'Nova\',
+    wordSize: parseInt(document.getElementById(\'wordSize\').value),
+    endian: document.getElementById(\'endian\').value,
+    regCount: parseInt(document.getElementById(\'regCount\').value),
+    kwLet: document.getElementById(\'kwLet\').value.trim() || \'let\',
+    kwPrint: document.getElementById(\'kwPrint\').value.trim() || \'print\',
+    opAssign: document.getElementById(\'opAssign\').value.trim() || \'=\',
+    opAdd: document.getElementById(\'opAdd\').value.trim() || \'+\',
+    opSub: document.getElementById(\'opSub\').value.trim() || \'-\',
+    opMul: document.getElementById(\'opMul\').value.trim() || \'*\',
+    opDiv: document.getElementById(\'opDiv\').value.trim() || \'/\'
+  };
+}
+
+function renderISA(){
+  const el=document.getElementById(\'isaList\');
+  el.innerHTML = Object.entries(OPCODES).map(([n,c])=> 
+    `<div class="flex justify-between bg-black border border-zinc-800 rounded px-2 py-1"><span>0x${c.toString(16).padStart(2,\'0\').toUpperCase()} ${n}</span><span class="text-zinc-500">${c}</span></div>`
+  ).join(\'\');
+}
+renderISA();
+
+document.getElementById(\'regCount\').addEventListener(\'input\', e=>{
+  document.getElementById(\'regCountLabel\').textContent=e.target.value;
+});
+[\'kwLet\',\'kwPrint\'].forEach(id=>document.getElementById(id).addEventListener(\'input\',()=>{
+  document.getElementById(\'editorTitle\').textContent = `${getConfig().name.toLowerCase()}.src — custom syntax`;
+}));
+
+function compile(){
+  const cfg=getConfig();
+  const src=document.getElementById(\'editor\').value;
+  try{
+    const {binary, disasm, constPool} = compileToBinary(src,cfg);
+    lastBinary = binary;
+    lastDisasm = disasm;
+    document.getElementById(\'binSize\').textContent = `${binary.length} bytes`;
+    document.getElementById(\'hexdump\').innerHTML = toHexDump(binary);
+    document.getElementById(\'disasm\').innerHTML = disasm.map((d,i)=> 
+      `<div><span class="text-zinc-600">${String(i*4).padStart(4,\'0\')}:</span> <span class="text-white">${d.op}</span> <span class="text-zinc-400">${d.args}</span> <span class="text-zinc-600">; bytes ${d.bytes}</span></div>`
+    ).join(\'\') + `<div class="mt-2 text-zinc-500">CONST POOL [${constPool.join(\', \')}]</div>`;
+    document.getElementById(\'status\').textContent = `Compiled ✓ ${disasm.length} instr`;
+    document.getElementById(\'status\').className=\'text-xs mono text-emerald-400\';
+  }catch(e){
+    document.getElementById(\'status\').textContent = \'Error: \'+e.message;
+    document.getElementById(\'status\').className=\'text-xs mono text-red-400\';
+  }
+}
+
+function toHexDump(bytes){
+  let out=\'\';
+  for(let i=0;i<bytes.length;i+=16){
+    const slice=bytes.slice(i,i+16);
+    const hex=Array.from(slice).map(b=>b.toString(16).padStart(2,\'0\').toUpperCase()).join(\' \');
+    const addr=i.toString(16).padStart(4,\'0\').toUpperCase();
+    out+=`<span class="text-zinc-600">${addr}</span>  ${hex}\n`;
+  }
+  return out;
+}
+
+// --- COMPILER ---
+function compileToBinary(src, cfg){
+  const lines = src.split(\'\n\').map(l=>l.trim()).filter(l=>l && !l.startsWith(\'//\'));
+  let constPool=[]; const constMap=new Map();
+  function getConstIdx(val){
+    if(constMap.has(val)) return constMap.get(val);
+    const idx=constPool.length; constPool.push(val); constMap.set(val, idx); return idx;
+  }
+  let varToReg=new Map(); let nextReg=0;
+  function getReg(name){
+    if(!varToReg.has(name)){
+      if(nextReg>=cfg.regCount) throw new Error(`Out of registers (max ${cfg.regCount}). Too many variables.`);
+      varToReg.set(name, nextReg++);
+    }
+    return varToReg.get(name);
+  }
+  let instructions=[];
+  
+  function emit(op, a=0,b=0,c=0){
+    instructions.push({op, a,b,c});
+  }
+  function compileExpr(expr, targetReg){
+    expr=expr.trim();
+    // find lowest precedence operator outside
+    const ops = [
+      {sym: cfg.opAdd, code: OPCODES.ADD},
+      {sym: cfg.opSub, code: OPCODES.SUB},
+      {sym: cfg.opMul, code: OPCODES.MUL},
+      {sym: cfg.opDiv, code: OPCODES.DIV},
+    ];
+    // handle precedence: try + - first at top level, then * /
+    // naive: split by + or - not inside higher precedence
+    // For simplicity use shunting-yard via tokenization
+    let tokens = tokenizeExpr(expr, cfg);
+    if(tokens.length===1){
+      const t=tokens[0];
+      if(/^-?\d+$/.test(t)){ const idx=getConstIdx(parseInt(t)); emit(OPCODES.LOAD_CONST, targetReg, idx, 0); }
+      else if(varToReg.has(t)){ emit(OPCODES.MOV, targetReg, varToReg.get(t), 0); }
+      else throw new Error(`Unknown identifier \'${t}\'`);
+      return;
+    }
+    // compile to RPN then emit
+    let rpn = toRPN(tokens, cfg);
+    let stack=[]; let tempRegBase=nextReg; // use extra regs for temps (reuse)
+    // We\'ll allocate temps from nextReg upwards, but ensure we don\'t exceed
+    let tempTop=0;
+    function allocTemp(){ 
+      let r = nextReg + tempTop; 
+      if(r>=cfg.regCount) throw new Error(\'Out of registers for expression temps. Increase register count.\');
+      tempTop++; return r;
+    }
+    for(let tok of rpn){
+      if([\'+\',\'-\',\'*\',\'/\'].includes(tok) || [cfg.opAdd,cfg.opSub,cfg.opMul,cfg.opDiv].includes(tok)){
+        let b=stack.pop(), a=stack.pop();
+        let dest = (stack.length===0) ? targetReg : allocTemp();
+        let op = tok===cfg.opAdd||tok===\'+\'?OPCODES.ADD : tok===cfg.opSub||tok===\'-\'?OPCODES.SUB : tok===cfg.opMul||tok===\'*\'?OPCODES.MUL:OPCODES.DIV;
+        emit(op, dest, a, b);
+        stack.push(dest);
+      } else {
+        let r=allocTemp();
+        if(/^-?\d+$/.test(tok)){ const idx=getConstIdx(parseInt(tok)); emit(OPCODES.LOAD_CONST, r, idx,0); }
+        else if(varToReg.has(tok)){ emit(OPCODES.MOV, r, varToReg.get(tok),0); }
+        else throw new Error(`Unknown identifier \'${tok}\'`);
+        stack.push(r);
+      }
+    }
+    if(stack[0]!==targetReg) emit(OPCODES.MOV, targetReg, stack[0],0);
+    nextReg += tempTop; // reserve temps permanently for simplicity
+  }
+
+  for(let line of lines){
+    if(line.startsWith(cfg.kwLet+\' \')){
+      let rest=line.slice(cfg.kwLet.length).trim();
+      let idx=rest.indexOf(cfg.opAssign);
+      if(idx===-1) throw new Error(`Expected \'${cfg.opAssign}\' in: ${line}`);
+      let name=rest.slice(0,idx).trim();
+      let expr=rest.slice(idx+cfg.opAssign.length).trim();
+      if(!/^[A-Za-z_]\w*$/.test(name)) throw new Error(`Invalid variable name \'${name}\'`);
+      let reg=getReg(name);
+      compileExpr(expr, reg);
+    } else if(line.startsWith(cfg.kwPrint+\' \')){
+      let expr=line.slice(cfg.kwPrint.length).trim();
+      let temp=nextReg < cfg.regCount ? nextReg : 0;
+      // use a temp reg to evaluate then print
+      let varIsSimple = /^[A-Za-z_]\w*$/.test(expr) && varToReg.has(expr);
+      if(varIsSimple){ emit(OPCODES.PRINT, varToReg.get(expr),0,0); }
+      else if(/^-?\d+$/.test(expr)){ const idx=getConstIdx(parseInt(expr)); let r= getReg(\'__print_tmp\'); emit(OPCODES.LOAD_CONST, r, idx,0); emit(OPCODES.PRINT,r,0,0); }
+      else {
+        let rTemp = nextReg; if(rTemp>=cfg.regCount) rTemp=0; // fallback
+        // allocate if needed
+        if(nextReg>=cfg.regCount) throw new Error(\'No register for print expression\');
+        let r = getReg(\'__expr_tmp\');
+        compileExpr(expr, r);
+        emit(OPCODES.PRINT, r,0,0);
+      }
+    } else throw new Error(`Unknown statement: ${line}. Use \'${cfg.kwLet} x ${cfg.opAssign} ...\' or \'${cfg.kwPrint} x\'`);
+  }
+  emit(OPCODES.HALT,0,0,0);
+
+  // Encode to binary
+  // Header: 4 bytes magic \'NVXA\' (0x4E 0x56 0x58 0x41), 1 byte version, 1 byte wordSize, 1 byte endian (0 little 1 big), 1 byte regCount, 4 bytes constPoolCount, then constPool (each 4 bytes int32), then code (each instr 4 bytes)
+  const headerSize = 4+1+1+1+1+4;
+  const constBytes = constPool.length * 4;
+  const codeBytes = instructions.length * 4;
+  const total = headerSize + constBytes + codeBytes;
+  let buf = new ArrayBuffer(total);
+  let view = new DataView(buf);
+  let off=0;
+  view.setUint8(off++, 0x4E); view.setUint8(off++, 0x56); view.setUint8(off++, 0x58); view.setUint8(off++, 0x41);
+  view.setUint8(off++, 0x01); // version
+  view.setUint8(off++, cfg.wordSize);
+  view.setUint8(off++, cfg.endian===\'little\'?0:1);
+  view.setUint8(off++, cfg.regCount);
+  view.setUint32(off, constPool.length, cfg.endian===\'little\'); off+=4;
+  for(let v of constPool){ view.setInt32(off, v, cfg.endian===\'little\'); off+=4; }
+  let disasm=[];
+  for(let ins of instructions){
+    view.setUint8(off, ins.op); view.setUint8(off+1, ins.a); view.setUint8(off+2, ins.b); view.setUint8(off+3, ins.c); off+=4;
+    disasm.push({op: OP_NAMES[ins.op] || `UNK(0x${ins.op.toString(16)})`, args: formatArgs(ins), bytes: `${ins.op.toString(16).padStart(2,\'0\')} ${ins.a.toString(16).padStart(2,\'0\')} ${ins.b.toString(16).padStart(2,\'0\')} ${ins.c.toString(16).padStart(2,\'0\')}`});
+  }
+  function formatArgs(ins){
+    if(ins.op===OPCODES.LOAD_CONST) return `R${ins.a}, #${ins.b} (= ${constPool[ins.b]})`;
+    if([OPCODES.ADD,OPCODES.SUB,OPCODES.MUL,OPCODES.DIV].includes(ins.op)) return `R${ins.a}, R${ins.b}, R${ins.c}`;
+    if(ins.op===OPCODES.MOV) return `R${ins.a}, R${ins.b}`;
+    if(ins.op===OPCODES.PRINT) return `R${ins.a}`;
+    if(ins.op===OPCODES.HALT) return ``;
+    return `${ins.a} ${ins.b} ${ins.c}`;
+  }
+  return {binary: new Uint8Array(buf), disasm, constPool};
+}
+
+function tokenizeExpr(expr, cfg){
+  // split keeping operators
+  let ops = [cfg.opAdd,cfg.opSub,cfg.opMul,cfg.opDiv].sort((a,b)=>b.length-a.length);
+  let pattern = ops.map(o=>escapeReg(o)).join(\'|\');
+  let re = new RegExp(`(${pattern}|[A-Za-z_]\\w*|\\d+|\\(|\\))`, \'g\');
+  let m = expr.match(re);
+  if(!m) throw new Error(`Bad expression \'${expr}\'`);
+  return m.map(t=>t.trim()).filter(Boolean);
+}
+function escapeReg(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,\'\\$&\'); }
+function toRPN(tokens, cfg){
+  let prec={[cfg.opMul]:2,[cfg.opDiv]:2,\'*\':2,\'/\':2,[cfg.opAdd]:1,[cfg.opSub]:1,\'+\':1,\'-\':1};
+  let out=[], ops=[];
+  for(let t of tokens){
+    if(/^-?\d+$/.test(t) || /^[A-Za-z_]\w*$/.test(t)) out.push(t);
+    else if(t===\'(\') ops.push(t);
+    else if(t===\')\'){ while(ops.length && ops[ops.length-1]!==\'(\') out.push(ops.pop()); ops.pop(); }
+    else { while(ops.length && ops[ops.length-1]!==\'(\' && prec[ops[ops.length-1]]>=prec[t]) out.push(ops.pop()); ops.push(t); }
+  }
+  while(ops.length) out.push(ops.pop());
+  return out;
+}
+
+// --- VM ---
+function runVM(){
+  if(!lastBinary){ compile(); if(!lastBinary) return; }
+  const cfg=getConfig();
+  const bytes=lastBinary;
+  let view=new DataView(bytes.buffer);
+  let off=0;
+  // verify header
+  let magic = String.fromCharCode(bytes[0],bytes[1],bytes[2],bytes[3]);
+  if(magic!==\'NVXA\'){ document.getElementById(\'console\').textContent=\'> Invalid binary (bad magic)\'; return; }
+  let version=view.getUint8(4), wordSize=view.getUint8(5), endianFlag=view.getUint8(6), regCount=view.getUint8(7);
+  let isLittle=endianFlag===0;
+  off=8; let constCount=view.getUint32(off,isLittle); off+=4;
+  let constPool=[]; for(let i=0;i<constCount;i++){ constPool.push(view.getInt32(off,isLittle)); off+=4; }
+  let regs=new Array(regCount).fill(0);
+  let pc=off; let output=[];
+  let steps=0;
+  while(pc < bytes.length){
+    let op=view.getUint8(pc), a=view.getUint8(pc+1), b=view.getUint8(pc+2), c=view.getUint8(pc+3);
+    steps++; if(steps>10000) {output.push(\'[VM] Infinite loop halted\'); break;}
+    // console.log(op,a,b,c)
+    if(op===OPCODES.LOAD_CONST){ regs[a]=constPool[b]; }
+    else if(op===OPCODES.MOV){ regs[a]=regs[b]; }
+    else if(op===OPCODES.ADD){ regs[a]=regs[b]+regs[c]; }
+    else if(op===OPCODES.SUB){ regs[a]=regs[b]-regs[c]; }
+    else if(op===OPCODES.MUL){ regs[a]=regs[b]*regs[c]; }
+    else if(op===OPCODES.DIV){ regs[a]= Math.trunc(regs[b]/regs[c]); }
+    else if(op===OPCODES.PRINT){ output.push(String(regs[a])); }
+    else if(op===OPCODES.HALT){ output.push(`[HALT] Executed ${steps} instructions`); break; }
+    else { output.push(`[VM ERROR] Unknown opcode 0x${op.toString(16)} at ${pc}`); break; }
+    pc+=4;
+  }
+  document.getElementById(\'console\').textContent = output.length ? output.join(\'\n\') : \'> (no output)\';
+  document.getElementById(\'console\').textContent += `\n\n[VM STATE] Registers: ${regs.map((v,i)=>`R${i}=${v}`).join(\' \')}`;
+}
+
+function downloadBin(){
+  if(!lastBinary){ compile(); }
+  if(!lastBinary) return;
+  let cfg=getConfig();
+  let blob=new Blob([lastBinary], {type:\'application/octet-stream\'});
+  let a=document.createElement(\'a\'); a.href=URL.createObjectURL(blob); a.download=`${cfg.name.toLowerCase()}.bin`; a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
